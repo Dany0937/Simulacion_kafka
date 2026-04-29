@@ -1,6 +1,7 @@
 """Clase TransactionConsumer - Consumidor de transacciones desde Kafka."""
 
-from confluent_kafka import Consumer, KafkaError, KafkaException
+from kafka import KafkaConsumer
+from kafka.errors import KafkaError
 from typing import Callable, Optional, List
 import json
 import threading
@@ -37,7 +38,7 @@ class TransactionConsumer:
         self._bootstrap_servers = bootstrap_servers
         self._topic = topic
         self._group_id = group_id
-        self._consumer: Optional[Consumer] = None
+        self._consumer: Optional[KafkaConsumer] = None
         self._running = False
         self._thread: Optional[threading.Thread] = None
         self._on_message_callback: Optional[Callable[[BankingTransaction], None]] = None
@@ -67,21 +68,20 @@ class TransactionConsumer:
         """
         self._on_message_callback = callback
     
-    def _create_consumer(self) -> Consumer:
+    def _create_consumer(self) -> KafkaConsumer:
         """
         Crea y configura el consumidor de Kafka.
         
         Returns:
             Consumer: Instancia configurada del consumidor
         """
-        config = {
-            "bootstrap.servers": self._bootstrap_servers,
-            "group.id": self._group_id,
-            "auto.offset.reset": "earliest",
-            "enable.auto.commit": True,
-            "auto.commit.interval.ms": 1000
-        }
-        return Consumer(config)
+        return KafkaConsumer(
+            self._topic,
+            bootstrap_servers=self._bootstrap_servers.split(','),
+            group_id=self._group_id,
+            auto_offset_reset='earliest',
+            enable_auto_commit=True
+        )
     
     def start_consuming(self) -> None:
         """
@@ -89,43 +89,22 @@ class TransactionConsumer:
         Procesa mensajes del topic hasta que se detenga.
         """
         self._consumer = self._create_consumer()
-        self._consumer.subscribe([self._topic])
         self._running = True
         
         print(f"[CONSUMER] Consumidor iniciado -> Topic: {self._topic}")
         print("[CONSUMER] Esperando transacciones...")
         
         try:
-            while self._running:
-                msg = self._consumer.poll(timeout=1.0)
-                
-                if msg is None:
-                    continue
-                
-                if msg.error():
-                    self._handle_error(msg.error())
-                    continue
-                
+            for msg in self._consumer:
+                if not self._running:
+                    break
                 self._process_message(msg)
-                
-        except KafkaException as e:
-            print(f"[CONSUMER ERROR] Excepción de Kafka: {e}")
+        except Exception as e:
+            print(f"[CONSUMER ERROR] Excepción: {e}")
         finally:
             self._cleanup()
         
         print("[CONSUMER] Consumidor detenido")
-    
-    def _handle_error(self, error: KafkaError) -> None:
-        """
-        Maneja errores del consumidor.
-        
-        Args:
-            error: Error de Kafka a procesar
-        """
-        if error.code() == KafkaError._PARTITION_EOF:
-            print(f"[CONSUMER] Fin de partición reached {error}")
-        else:
-            print(f"[CONSUMER ERROR] Error: {error}")
     
     def _process_message(self, msg) -> None:
         """
@@ -135,7 +114,7 @@ class TransactionConsumer:
             msg: Mensaje recibido
         """
         try:
-            value = msg.value()
+            value = msg.value
             if value is None:
                 return
             

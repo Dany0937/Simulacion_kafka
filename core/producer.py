@@ -1,6 +1,6 @@
 """Clase TransactionProducer - Generador de transacciones hacia Kafka."""
 
-from confluent_kafka import Producer
+from kafka import KafkaProducer
 from typing import Callable, Optional
 import json
 import time
@@ -35,10 +35,13 @@ class TransactionProducer:
         """
         self._bootstrap_servers = bootstrap_servers
         self._topic = topic
-        self._producer = Producer({
-            "bootstrap.servers": bootstrap_servers,
-            "client.id": "banking-producer"
-        })
+        self._producer = KafkaProducer(
+            bootstrap_servers=bootstrap_servers.split(','),
+            value_serializer=lambda v: json.dumps(v).encode('utf-8'),
+            key_serializer=lambda k: k.encode('utf-8'),
+            linger_ms=10,
+            acks='all'
+        )
         self._running = False
         self._thread: Optional[threading.Thread] = None
         self._on_send_callback: Optional[Callable[[BankingTransaction], None]] = None
@@ -62,19 +65,6 @@ class TransactionProducer:
         """
         self._on_send_callback = callback
     
-    def _delivery_callback(self, err, msg) -> None:
-        """
-        Callback invoked once for each produced message.
-        
-        Args:
-            err: Error si falló el envío
-            msg: Mensaje confirmado
-        """
-        if err is not None:
-            print(f"[PRODUCER ERROR] Error al enviar mensaje: {err}")
-        else:
-            print(f"[PRODUCER] Mensaje entregado a {msg.topic()} [{msg.partition()}]")
-    
     def start_producing(self) -> None:
         """
         Inicia la generación continua de transacciones.
@@ -89,17 +79,11 @@ class TransactionProducer:
             try:
                 transaction = BankingTransaction.generate_random()
                 
-                message = json.dumps(transaction.to_dict()).encode("utf-8")
-                key = transaction.transaction_id.encode("utf-8")
-                
-                self._producer.produce(
+                self._producer.send(
                     topic=self._topic,
-                    key=key,
-                    value=message,
-                    callback=self._delivery_callback
+                    value=transaction.to_dict(),
+                    key=transaction.transaction_id
                 )
-                
-                self._producer.poll(0)
                 
                 if self._on_send_callback:
                     self._on_send_callback(transaction)
@@ -146,16 +130,11 @@ class TransactionProducer:
         Args:
             transaction: Transacción a enviar
         """
-        message = json.dumps(transaction.to_dict()).encode("utf-8")
-        key = transaction.transaction_id.encode("utf-8")
-        
-        self._producer.produce(
+        self._producer.send(
             topic=self._topic,
-            key=key,
-            value=message,
-            callback=self._delivery_callback
+            value=transaction.to_dict(),
+            key=transaction.transaction_id
         )
-        self._producer.poll(0)
     
     def __enter__(self) -> "TransactionProducer":
         """ Soporte para context manager."""

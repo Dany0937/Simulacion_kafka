@@ -48,12 +48,11 @@ def main() -> None:
     print()
     
     try:
-        root = tk.Tk()
-        app = create_app(root)
+        app = create_app()
         print("Interfaz iniciada correctamente")
         print("Presione 'Iniciar Simulación' para comenzar")
         print()
-        root.mainloop()
+        app.root.mainloop()
         
     except tk.TclError as e:
         print(f"ERROR: No se pudo iniciar la interfaz gráfica")

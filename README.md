@@ -1,6 +1,6 @@
 # Simulador de Transacciones Bancarias con Apache Kafka
 
-Sistema de simulación para actividad universitaria de Bases de Datos Masivas. Un productor genera transacciones bancarias cada segundo y un consumidor las procesa en tiempo real mediante Apache Kafka.
+Sistema de simulación para actividad universitaria de Bases de Datos Masivas. Un productor genera transacciones bancarias cada segundo y un consumidor las procesa en tiempo real mediante Apache Kafka usando kafka-python.
 
 ## Arquitectura
 
@@ -74,8 +74,10 @@ docker-compose logs -f kafka
 python -m venv venv
 
 # Activar entorno virtual
-# En Windows:
-venv\Scripts\activate
+# En Windows (Git Bash/MSYS):
+source venv/Scripts/activate
+# En Windows (PowerShell):
+.\venv\Scripts\Activate.ps1
 # En Linux/Mac:
 source venv/bin/activate
 
