@@ -1,5 +1,3 @@
-"""Clase TransactionConsumer - Consumidor de transacciones desde Kafka."""
-
 from kafka import KafkaConsumer
 from kafka.errors import KafkaError
 from typing import Callable, Optional, List
@@ -7,34 +5,13 @@ import json
 import threading
 from core.transaction import BankingTransaction
 
-
 class TransactionConsumer:
-    """
-    Consumidor de transacciones bancarias desde Apache Kafka.
-    
-    Implementa el patrón de diseño Observer para procesar
-    mensajes de un topic de Kafka en tiempo real.
-    
-    Attributes:
-        bootstrap_servers: Servidores Kafka para conexión
-        topic: Topic de origen
-        group_id: Identificador del grupo de consumidores
-    """
-    
     def __init__(
         self,
         bootstrap_servers: str = "localhost:9092",
         topic: str = "banking-transactions",
         group_id: str = "banking-consumer-group"
     ):
-        """
-        Inicializa el consumidor de transacciones.
-        
-        Args:
-            bootstrap_servers: Dirección del broker Kafka
-            topic: Nombre del topic a consumir
-            group_id: Identificador del grupo de consumidores
-        """
         self._bootstrap_servers = bootstrap_servers
         self._topic = topic
         self._group_id = group_id
@@ -46,35 +23,20 @@ class TransactionConsumer:
     
     @property
     def topic(self) -> str:
-        """Topic de origen."""
         return self._topic
     
     @property
     def is_running(self) -> bool:
-        """Verifica si el consumidor está activo."""
         return self._running
     
     @property
     def transactions_count(self) -> int:
-        """Cantidad de transacciones recibidas."""
         return len(self._transactions_received)
     
     def set_on_message_callback(self, callback: Callable[[BankingTransaction], None]) -> None:
-        """
-        Establece un callback para procesar cada mensaje recibido.
-        
-        Args:
-            callback: Función a ejecutar con cada transacción
-        """
         self._on_message_callback = callback
     
     def _create_consumer(self) -> KafkaConsumer:
-        """
-        Crea y configura el consumidor de Kafka.
-        
-        Returns:
-            Consumer: Instancia configurada del consumidor
-        """
         return KafkaConsumer(
             self._topic,
             bootstrap_servers=self._bootstrap_servers.split(','),
@@ -84,10 +46,6 @@ class TransactionConsumer:
         )
     
     def start_consuming(self) -> None:
-        """
-        Inicia el consumo continuo de transacciones.
-        Procesa mensajes del topic hasta que se detenga.
-        """
         self._consumer = self._create_consumer()
         self._running = True
         
@@ -107,12 +65,6 @@ class TransactionConsumer:
         print("[CONSUMER] Consumidor detenido")
     
     def _process_message(self, msg) -> None:
-        """
-        Procesa un mensaje recibido de Kafka.
-        
-        Args:
-            msg: Mensaje recibido
-        """
         try:
             value = msg.value
             if value is None:
@@ -140,7 +92,6 @@ class TransactionConsumer:
             self._consumer = None
     
     def start_async(self) -> None:
-        """Inicia el consumidor en un hilo separado."""
         if self._thread is not None and self._thread.is_alive():
             print("[CONSUMER] El consumidor ya está en ejecución")
             return
@@ -154,7 +105,6 @@ class TransactionConsumer:
         print(f"[CONSUMER] Hilo iniciado: {self._thread.name}")
     
     def stop(self) -> None:
-        """Detiene el consumidor de forma segura."""
         print("[CONSUMER] Deteniendo consumidor...")
         self._running = False
         
@@ -165,9 +115,7 @@ class TransactionConsumer:
         print("[CONSUMER] Consumidor detenido exitosamente")
     
     def __enter__(self) -> "TransactionConsumer":
-        """Soporte para context manager."""
         return self
     
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
-        """Cierra recursos al salir del context manager."""
         self.stop()

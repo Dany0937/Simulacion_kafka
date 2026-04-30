@@ -8,20 +8,7 @@ import random
 
 
 @dataclass
-class BankingTransaction:
-    """
-    Modelo que representa una transacción bancaria.
-    
-    Attributes:
-        transaction_id: Identificador único de la transacción
-        account_number: Número de cuenta del cliente
-        transaction_type: Tipo de transacción (DEPOSITO, RETIRO, TRANSFERENCIA)
-        amount: Monto de la transacción
-        timestamp: Fecha y hora de creación
-        status: Estado de la transacción
-        description: Descripción opcional
-    """
-    
+class BankingTransaction:    
     transaction_types_available: ClassVar[tuple] = ("DEPOSITO", "RETIRO", "TRANSFERENCIA")
     
     transaction_id: str
@@ -34,12 +21,6 @@ class BankingTransaction:
     
     @staticmethod
     def generate_random() -> "BankingTransaction":
-        """
-        Genera una transacción bancaria aleatoria con datos realistas.
-        
-        Returns:
-            BankingTransaction: Nueva instancia con datos aleatorios
-        """
         transaction_id = str(uuid.uuid4())[:8].upper()
         account_number = f"CUENTA{random.randint(100000, 999999)}"
         transaction_type = random.choice(BankingTransaction.transaction_types_available)
@@ -64,12 +45,6 @@ class BankingTransaction:
         )
     
     def to_dict(self) -> dict:
-        """
-        Convierte la transacción a diccionario para serialización.
-        
-        Returns:
-            dict: Representación en diccionario
-        """
         return {
             "transaction_id": self.transaction_id,
             "account_number": self.account_number,
@@ -82,22 +57,13 @@ class BankingTransaction:
     
     @classmethod
     def from_dict(cls, data: dict) -> "BankingTransaction":
-        """
-        Crea una instancia desde un diccionario.
         
-        Args:
-            data: Diccionario con datos de la transacción
-            
-        Returns:
-            BankingTransaction: Nueva instancia reconstruida
-        """
         data = data.copy()
         if "timestamp" in data and isinstance(data["timestamp"], str):
             data["timestamp"] = datetime.fromisoformat(data["timestamp"])
         return cls(**data)
     
     def __str__(self) -> str:
-        """Representación legible de la transacción."""
         return (
             f"[{self.timestamp.strftime('%H:%M:%S')}] "
             f"{self.transaction_type:15} ${self.amount:>10.2f} | "
